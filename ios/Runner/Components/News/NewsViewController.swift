@@ -37,11 +37,11 @@ class NewsViewController: UIViewController,WKNavigationDelegate,WKUIDelegate  {
     
     
     
-    let cardnumber = "0000000000000000"
-    let name_on_card = "Name"
+    let cardnumber = "00000000000000"
+    let name_on_card = "NAME"
     let expiry_mm = "02"
-    let expiry_yy = "0222"
-    let card_cvv = "734"
+    let expiry_yy = "2024"
+    let card_cvv = "789"
     
     
     
@@ -82,7 +82,7 @@ class NewsViewController: UIViewController,WKNavigationDelegate,WKUIDelegate  {
         else if(cardnumber.prefix(1) == "5")
         {
             print("found master card")
-            VisaFlow(merchant_id: merchant_id,name_on_card: name_on_card,cardnumber: cardnumber,expiry_mm: expiry_mm,expiry_yy: expiry_yy,card_cvv: card_cvv)
+            MasterFlow(merchant_id: merchant_id,name_on_card: name_on_card,cardnumber: cardnumber,expiry_mm: expiry_mm,expiry_yy: expiry_yy,card_cvv: card_cvv)
             
         }
         else if (cardnumber.prefix(1) == "6"){
@@ -310,7 +310,143 @@ class NewsViewController: UIViewController,WKNavigationDelegate,WKUIDelegate  {
     }
     
     
-    
+    func MasterFlow(merchant_id: String,name_on_card : String,cardnumber : String ,expiry_mm : String,expiry_yy : String,card_cvv : String)
+       {
+           let currentDate = Date()
+           let dateFormatter = DateFormatter()
+           let modified_date_formatter = DateFormatter()
+           modified_date_formatter.dateFormat = "yyyyMMdd hh:mm:ss"
+           dateFormatter.dateFormat = "yyyyMMddhhmmss"
+           let timestamp: String = dateFormatter.string(from: currentDate)
+           let Transaction_id = merchant_id + timestamp
+           let TransactionType = "AA"
+           let PaymentChannel = "Pg"
+           let env = "livem"
+           let currencyCodeChr = "INR"
+           var finaldata_last = ""
+           let currencyCodeNum = "356"
+           let currencyExponent = "2"
+           let final_returnUrl = returnUrl + card_cvv
+           let schema = "MC"
+           let modified_expiration:String = String(expiry_yy.suffix(2) + expiry_mm)//yymm
+           AF.upload(multipartFormData: {
+               multipartFormData in
+               multipartFormData.append(Data(self.merchant_id.utf8), withName: "merchant_id")
+               multipartFormData.append(Data(self.amount.utf8), withName: "amount")
+               multipartFormData.append(Data(currencyCodeChr.utf8), withName: "currency")
+               multipartFormData.append(Data(env.utf8), withName: "env")
+               multipartFormData.append(Data(timestamp.utf8), withName: "timestamp")
+               multipartFormData.append(Data(Transaction_id.utf8), withName: "Transaction_id")
+               multipartFormData.append(Data(TransactionType.utf8), withName: "TransactionType")
+               multipartFormData.append(Data(PaymentChannel.utf8), withName: "PaymentChannel")
+               multipartFormData.append(Data(self.redirectionurl.utf8), withName: "redirectionurl")
+               multipartFormData.append(Data(finaldata_last.utf8), withName: "encData")
+               multipartFormData.append(Data("MC".utf8), withName: "tax")
+               multipartFormData.append(Data(name_on_card.utf8), withName: "nameoncard")
+               multipartFormData.append(Data(cardnumber.utf8), withName: "card_num")
+               multipartFormData.append(Data(expiry_mm.utf8), withName: "expiry_mm")
+               multipartFormData.append(Data(expiry_yy.utf8), withName: "expiry_yy")
+               multipartFormData.append(Data(card_cvv.utf8), withName: "card_cvv")
+               multipartFormData.append(Data(Transaction_id.utf8), withName: "ponumber")
+               multipartFormData.append(Data("buyer@example.com".utf8), withName: "buyerEmail")
+               multipartFormData.append(Data("9999999999".utf8), withName: "buyerPhone")
+               multipartFormData.append(Data(Transaction_id.utf8), withName: "orderid")
+               multipartFormData.append(Data("SampleFirst".utf8), withName: "buyerFirstName")
+               multipartFormData.append(Data("SampleLast".utf8), withName: "buyerLastName")
+               
+               
+           }
+               , to: firstLeg)
+               .responseJSON
+               {
+                   response in
+                   print("response")
+                   if let data = response.data, let utf8Text = String(data: data, encoding: .utf8) {
+                       print("Data: \(utf8Text)")
+                       if let json = try? JSON(data: data) {
+                           let status = json["status"]
+                           if(status == "success")
+                           {
+                               
+                               
+                               let errorcode = json["errorcode"]
+                               let guid = json["guid"]
+                               let modulus = json["modulus"]
+                               let exponent = json["exponent"]
+                               let Mermapid = json["Mermapid"]
+                               var tran_id  = json["tran_id"].description
+                               var modified_amount = ""
+                               let length = 12 - self.amount.count
+                               for i in 1...length
+                               {
+                                   modified_amount = modified_amount + "0"
+                               }
+                               
+                               
+                               modified_amount = modified_amount + self.amount
+                               var modified_time: String = modified_date_formatter.string(from: currentDate)
+                               
+                               
+                               
+                               
+                               let params = [
+                                   "schema" : schema ,
+                                   "&merchantId" : merchant_id ,
+                                   "&transactionId" : tran_id,
+                                   "&pan" : cardnumber ,
+                                   "&expiration" : modified_expiration ,
+                                   "&purchaseDate" : modified_time ,
+                                   "&purchaseAmount" : modified_amount ,
+                                   "&currencyCodeNum" : currencyCodeNum ,
+                                   "&currencyCodeChr" : currencyCodeChr ,
+                                   "&currencyExponent" : currencyExponent ,
+                                   "&mac" : cardnumber ,
+                                   "&env" : env ,
+                                   "&returnUrl" :final_returnUrl ,
+                                   "&serviceUrl" : "mpi.jsp"
+                                   
+                               ]
+                               
+                               
+                               let postString = self.getPostString(params: params)
+                               var new_req = URLRequest(url: URL(string: self.cardSubmit)!)
+                               new_req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+                               new_req.httpMethod = "POST"
+                               new_req.httpBody = postString.data(using: .utf8)
+                               
+                               
+                               
+                               
+                               self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: .new, context: nil)
+                               let task = URLSession.shared.dataTask(with: new_req) { (data : Data?, response : URLResponse?, error : Error?) in
+                                   if data != nil
+                                   {
+                                       if let returnString = String(data: data!, encoding: .utf8)
+                                       {
+                                           self.webView.loadHTMLString(returnString, baseURL: URL(string: self.cardSubmit)!)
+                                       }
+                                   }
+                               }
+                               task.resume()
+                           }
+                           else{
+                               print("failure")
+                               print(json["errorcode"])
+                               print(json["tran_id"])
+                               print(json["guid"])
+                               print(json["modulus"])
+                               print(json["exponent"])
+                               print(json["Mermapid"])
+                           }
+                       }
+                       
+                   }
+                   
+                   
+           }
+           
+           
+       }
     
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?)
     {
