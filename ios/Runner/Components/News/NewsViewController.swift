@@ -23,7 +23,9 @@ class NewsViewController: UIViewController,WKNavigationDelegate,WKUIDelegate  {
     //PROD
     
     var loadUrl = URL(string: "https://pg.credopay.in/credopay/api/visasubmit1.php")!
-    let redirectionurl = "http://example.com?"
+    //let redirectionurl = "https://pg.credopay.in/credopaylogin/digitalpaySuccess.php?"
+    
+      let redirectionurl = "https://www.example.com/?" //redirection url without cvv
     let firstLeg = "https://pg.credopay.in/credopay/api/CPDirectPG.php";
     let cardSubmit = "https://pg.credopay.in/credopay/api/visasubmit1.php";
     let returnUrl = "https://pg.credopay.in/credopay/api/appresponsemerchant.php?randomgen="
@@ -37,19 +39,14 @@ class NewsViewController: UIViewController,WKNavigationDelegate,WKUIDelegate  {
     
     
     
-    let cardnumber = "00000000000000"
+    let cardnumber = "0000000000000000"
     let name_on_card = "NAME"
-    let expiry_mm = "02"
-    let expiry_yy = "2024"
-    let card_cvv = "789"
+    let expiry_mm = "11"
+    let expiry_yy = "23"
+    let card_cvv = "908"
+
     
-    
-    
-    
-    
-    
-    
-    
+
     
     @IBOutlet weak var webViewContainer: UIView!
     
@@ -70,7 +67,9 @@ class NewsViewController: UIViewController,WKNavigationDelegate,WKUIDelegate  {
         webView.bottomAnchor.constraint(equalTo: webViewContainer.bottomAnchor).isActive = true
         webView.heightAnchor.constraint(equalTo: webViewContainer.heightAnchor).isActive = true
         webView.uiDelegate = self
+    
         webView.navigationDelegate = self
+        
         
         if(cardnumber.prefix(1)=="4")
         {
@@ -117,6 +116,9 @@ class NewsViewController: UIViewController,WKNavigationDelegate,WKUIDelegate  {
         let TransactionType = "AA"
         let PaymentChannel = "Pg"
         let env = "live"
+        
+        var expiry_yy = "20" + expiry_yy ;
+   print(expiry_yy)
         
         do
         {
@@ -189,7 +191,18 @@ class NewsViewController: UIViewController,WKNavigationDelegate,WKUIDelegate  {
         let currencyExponent = "2"
         let final_returnUrl = returnUrl + card_cvv
         let schema = "VISA3DSPIT"
-        let modified_expiration:String = String(expiry_yy.suffix(2) + expiry_mm)//yymm
+        //let modified_expiration:String = String(expiry_yy.suffix(2) + expiry_mm)//yymm
+        
+        let modified_expiration:String  = expiry_yy + expiry_mm
+        
+        let expiry_yy = "20" + expiry_yy
+        
+        print(modified_expiration) //2411
+        print(expiry_yy) //2024
+        print(expiry_mm) //11
+        
+        
+        
         AF.upload(multipartFormData: {
             multipartFormData in
             multipartFormData.append(Data(self.merchant_id.utf8), withName: "merchant_id")
@@ -328,7 +341,16 @@ class NewsViewController: UIViewController,WKNavigationDelegate,WKUIDelegate  {
            let currencyExponent = "2"
            let final_returnUrl = returnUrl + card_cvv
            let schema = "MC"
-           let modified_expiration:String = String(expiry_yy.suffix(2) + expiry_mm)//yymm
+              let modified_expiration:String  = expiry_yy + expiry_mm
+              
+              let expiry_yy = "20" + expiry_yy
+              
+              print(modified_expiration) //2411
+              print(expiry_yy) //2024
+              print(expiry_mm) //11
+        
+        
+        
            AF.upload(multipartFormData: {
                multipartFormData in
                multipartFormData.append(Data(self.merchant_id.utf8), withName: "merchant_id")
@@ -450,28 +472,58 @@ class NewsViewController: UIViewController,WKNavigationDelegate,WKUIDelegate  {
     
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?)
     {
+        
+        
+        print(Float(webView.estimatedProgress))
         let url = webView.url?.absoluteString;
         print(url!)
-        if((url?.contains("success="))! && (url?.contains("responsecode="))! && Float(webView.estimatedProgress) == 1.0)
+        if((url?.contains("success="))! && (url?.contains(redirectionurl))! && (Float(webView.estimatedProgress) == 1.0) && (!(url?.contains("fbtestbackground.php"))!))
         {
             
             
-            print("Response====================================")
-            print(url!)
-            print("Read url for response====================================")
             
-            let url_data = URL(string: url!);
+   
+            if(url!.contains("success=true"))
+            {
+                
+                
+                print("============TRANSACTION SUCCESS============")
+                print("============FULL        RESPONSE===========")
+                print(url!) // RESOPNSE DATA
+                
+                let url_data = URL(string: url!);
+                          
+                          print(url_data!["responsecode"]!)
+                          print(url_data!["merchant_id"]!)
+                          print(url_data!["transaction_id"]!)
+                          print(url_data!["amount"]!)
+                          print(url_data!["success"]!)
+                          print(url_data!["errordesc"]!)
+                          print(url_data!["rrn"]!)
+                
+            }
             
-            print(url_data!["responsecode"]!)
-            print(url_data!["merchant_id"]!)
-            print(url_data!["transaction_id"]!)
-            print(url_data!["amount"]!)
-            print(url_data!["currency"]!)
-            print(url_data!["TransactionType"]!)
-            print(url_data!["success"]!)
-            print(url_data!["errordesc"]!)
-            print(url_data!["rrn"]!)
-            print(url_data!["refNbr"]!)
+          
+        if(url!.contains("success=false"))
+                       {
+                           
+                           
+                           
+                           print("============TRANSACTION FAILURE============")
+                           print("============FULL        RESPONSE===========")
+                           print(url!) // RESOPNSE DATA
+                           
+                           let url_data = URL(string: url!);
+                                     
+                                   
+                                     print(url_data!["merchant_id"]!)
+                                     print(url_data!["transaction_id"]!)
+                                     print(url_data!["amount"]!)
+                                     print(url_data!["success"]!)
+                                     print(url_data!["errordesc"]!)
+                                     print(url_data!["rrn"]!)
+                           
+                       }
             
             
         }
@@ -494,14 +546,14 @@ class NewsViewController: UIViewController,WKNavigationDelegate,WKUIDelegate  {
     }
     func responseCallback(url_data: URL)
     {
-        print(url_data["responsecode"]!)
-        print(url_data["merchant_id"]!)
-        print(url_data["transaction_id"]!)
-        print(url_data["amount"]!)
-        print(url_data["TransactionType"]!)
-        print(url_data["success"]!)
-        print(url_data["errordesc"]!)
-        print(url_data["refNbr"]!)
+//        print(url_data["responsecode"]!)
+//        print(url_data["merchant_id"]!)
+//        print(url_data["transaction_id"]!)
+//        print(url_data["amount"]!)
+//        print(url_data["TransactionType"]!)
+//        print(url_data["success"]!)
+//        print(url_data["errordesc"]!)
+//        print(url_data["refNbr"]!)
         
     }
     
